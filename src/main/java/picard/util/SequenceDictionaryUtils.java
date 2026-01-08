@@ -49,7 +49,9 @@ import java.math.BigInteger;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
@@ -213,6 +215,39 @@ public class SequenceDictionaryUtils {
         } catch (final SequenceUtil.SequenceListsDifferException e) {
             throw new PicardException(
                     String.format("Sequence dictionary for (%s) does not match sequence dictionary for (%s)",
+                            firstDictSource,
+                            secondDictSource),
+                    e);
+        }
+    }
+    
+    /**
+     * Throw an exception if the first sequence dictionary is not a subset of the second one
+     *
+     * @param firstDict first dictionary to compare
+     * @param firstDictSource a user-recognizable message identifying the source of the first dictionary, preferably a file path
+     * @param secondDict second dictionary to compare
+     * @param secondDictSource a user-recognizable message identifying the source of the second dictionary,  preferably a file path
+     */
+    public static void assertSequenceDictionariesSubset(
+            final SAMSequenceDictionary firstDict,
+            final String firstDictSource,
+            final SAMSequenceDictionary secondDict,
+            final String secondDictSource) {
+        try {
+        	if(firstDict != null && secondDict != null) {
+        		List<SAMSequenceRecord> firstSequenceList = firstDict.getSequences(), secondSequenceList = secondDict.getSequences();
+        		HashSet<SAMSequenceRecord> secondSequenceSet = new HashSet<SAMSequenceRecord>();
+        		secondSequenceSet.addAll(secondSequenceList);
+        		for(SAMSequenceRecord rec : firstSequenceList) {
+        			if(!secondSequenceSet.contains(rec)) {
+        				throw new Exception("Missing sequence: " + rec.getSequenceName());
+        			}
+        		}
+        	}       	
+        } catch (final Exception e) {
+            throw new PicardException(
+                    String.format("Sequence dictionary for (%s) is not a subset of sequence dictionary for (%s)",
                             firstDictSource,
                             secondDictSource),
                     e);
