@@ -59,7 +59,7 @@ import java.util.Collection;
 public abstract class SinglePassSamProgram extends CommandLineProgram {
     @Argument(shortName = StandardOptionDefinitions.INPUT_SHORT_NAME, doc = "Input SAM/BAM/CRAM file.")
     public File INPUT;
-    
+
     @ArgumentCollection
     public OutputArgumentCollection output = getOutputArgumentCollection();
 
@@ -82,7 +82,7 @@ public abstract class SinglePassSamProgram extends CommandLineProgram {
      * Set the reference File.
      */
     public void setReferenceSequence(final File referenceFile) {
-    	REFERENCE_SEQUENCE = referenceFile;
+        REFERENCE_SEQUENCE = referenceFile;
     };
 
     /**
@@ -108,9 +108,9 @@ public abstract class SinglePassSamProgram extends CommandLineProgram {
 
         IndexedFastaSequenceFile indexedReference = null;
         try {
-        	indexedReference = new IndexedFastaSequenceFile(referenceSequence);
-    	} catch(Exception e) {
-    	}
+            indexedReference = new IndexedFastaSequenceFile(referenceSequence);
+        } catch(Exception e) {
+        }
         // Optionally load up the reference sequence and double check sequence dictionaries
         final ReferenceSequenceFileWalker walker;
         if (referenceSequence == null) {
@@ -120,19 +120,19 @@ public abstract class SinglePassSamProgram extends CommandLineProgram {
             walker = new ReferenceSequenceFileWalker(referenceSequence);
 
             if (!in.getFileHeader().getSequenceDictionary().isEmpty()) {
-            	if(indexedReference == null) {
-            	    SequenceDictionaryUtils.assertSequenceDictionariesEqual(
+                if(indexedReference == null) {
+                    SequenceDictionaryUtils.assertSequenceDictionariesEqual(
                         in.getFileHeader().getSequenceDictionary(),
                         input.getAbsolutePath(),
                         walker.getSequenceDictionary(),
                         referenceSequence.getAbsolutePath());
-            	} else {
-            		SequenceDictionaryUtils.assertSequenceDictionariesSubset(
+                } else {
+                    SequenceDictionaryUtils.assertSequenceDictionariesSubset(
                             in.getFileHeader().getSequenceDictionary(),
                             input.getAbsolutePath(),
-                            walker.getSequenceDictionary(),
+                            indexedReference,
                             referenceSequence.getAbsolutePath());
-            	}
+                }
             }
         }
 
@@ -162,22 +162,21 @@ public abstract class SinglePassSamProgram extends CommandLineProgram {
 
 
         final ProgressLogger progress = new ProgressLogger(log);
-        
+
         ReferenceSequence ref = null;
 
         for (final SAMRecord rec : in) {
-            //final ReferenceSequence ref;
             if (walker == null || rec.getReferenceIndex() == SAMRecord.NO_ALIGNMENT_REFERENCE_INDEX) {
                 ref = null;
             } else {
-            	String samRecordReferenceName = rec.getReferenceName(); 
-            	if(ref == null || !samRecordReferenceName.equals(ref.getName())) {
-            		if(indexedReference != null) {
-            			ref = indexedReference.getSequence(samRecordReferenceName);
-            		} else {
-            			ref = walker.get(rec.getReferenceIndex());
-            		}
-            	}
+                String samRecordReferenceName = rec.getReferenceName(); 
+                if(ref == null || !samRecordReferenceName.equals(ref.getName())) {
+                    if(indexedReference != null) {
+                        ref = indexedReference.getSequence(samRecordReferenceName);
+                    } else {
+                        ref = walker.get(rec.getReferenceIndex());
+                    }
+                }
             }
 
             for (final SinglePassSamProgram program : programs) {

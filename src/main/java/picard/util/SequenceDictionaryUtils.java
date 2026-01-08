@@ -26,6 +26,8 @@ package picard.util;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.SAMSequenceDictionaryCodec;
 import htsjdk.samtools.SAMSequenceRecord;
+import htsjdk.samtools.reference.FastaSequenceIndex;
+import htsjdk.samtools.reference.IndexedFastaSequenceFile;
 import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.reference.ReferenceSequenceFileFactory;
@@ -49,7 +51,6 @@ import java.math.BigInteger;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -222,34 +223,34 @@ public class SequenceDictionaryUtils {
     }
     
     /**
-     * Throw an exception if the first sequence dictionary is not a subset of the second one
+     * Throw an exception if the first sequence dictionary is not a subset of sequences in the given indexed fasta
      *
-     * @param firstDict first dictionary to compare
+     * @param firstDict dictionary to compare
      * @param firstDictSource a user-recognizable message identifying the source of the first dictionary, preferably a file path
-     * @param secondDict second dictionary to compare
-     * @param secondDictSource a user-recognizable message identifying the source of the second dictionary,  preferably a file path
+     * @param indexedFasta index fasta to check that the dictionary is a subset 
+     * @param indexedFastaSource a user-recognizable message identifying the source of the second dictionary,  preferably a file path
      */
     public static void assertSequenceDictionariesSubset(
             final SAMSequenceDictionary firstDict,
             final String firstDictSource,
-            final SAMSequenceDictionary secondDict,
-            final String secondDictSource) {
+            final IndexedFastaSequenceFile indexedFasta,
+            final String indexedFastaSource) {
         try {
-        	if(firstDict != null && secondDict != null) {
-        		List<SAMSequenceRecord> firstSequenceList = firstDict.getSequences(), secondSequenceList = secondDict.getSequences();
-        		HashSet<SAMSequenceRecord> secondSequenceSet = new HashSet<SAMSequenceRecord>();
-        		secondSequenceSet.addAll(secondSequenceList);
-        		for(SAMSequenceRecord rec : firstSequenceList) {
-        			if(!secondSequenceSet.contains(rec)) {
-        				throw new Exception("Missing sequence: " + rec.getSequenceName());
-        			}
-        		}
-        	}       	
+            if(firstDict != null) {
+                List<SAMSequenceRecord> firstSequenceList = firstDict.getSequences();
+                FastaSequenceIndex index = indexedFasta.getIndex();
+                for(SAMSequenceRecord rec : firstSequenceList) {
+                    String seqName = rec.getSequenceName();
+                    if(!index.hasIndexEntry(seqName)) {
+                        throw new Exception("Missing sequence in subset check: " + seqName);
+                    }
+                }
+            }
         } catch (final Exception e) {
             throw new PicardException(
                     String.format("Sequence dictionary for (%s) is not a subset of sequence dictionary for (%s)",
                             firstDictSource,
-                            secondDictSource),
+                            indexedFastaSource),
                     e);
         }
     }
